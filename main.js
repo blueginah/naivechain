@@ -15,6 +15,7 @@ class Block {
         this.timestamp = timestamp;
         this.data = data;
         this.hash = hash.toString();
+		this.content = "hello";
     }
 }
 
