@@ -1,5 +1,5 @@
-'use strict';
-var CryptoJS = require("crypto-js");
+'use strict'; // 아래의 library 다운을 받아야함. 실행 및 확인은 postman를 통해서 진행
+var CryptoJS = require("crypto-js"); // transaction 생성 및 varification 없음
 var express = require("express");
 var bodyParser = require('body-parser');
 var WebSocket = require("ws");
@@ -9,13 +9,14 @@ var p2p_port = process.env.P2P_PORT || 6001;
 var initialPeers = process.env.PEERS ? process.env.PEERS.split(',') : [];
 
 class Block {
-    constructor(index, previousHash, timestamp, data, hash) {
+    constructor(index, previousHash, timestamp, data, hash, nonce, targetvalue) {
         this.index = index;
         this.previousHash = previousHash.toString();
         this.timestamp = timestamp;
         this.data = data;
         this.hash = hash.toString();
-		this.content = "hello";
+        this.nonce = nonce;
+        this.targetvalue = targetvalue;
     }
 }
 
@@ -26,14 +27,14 @@ var MessageType = {
     RESPONSE_BLOCKCHAIN: 2
 };
 
-var getGenesisBlock = () => {
-    return new Block(0, "0", 1465154705, "my genesis block!!", "816534932c2b7154836da6afc367695e6337db8a921823784c14378abed4f7d7");
+var getGenesisBlock = () => { // 추후, write할 수 있게 수정 필요.
+    return new Block(0, "0", 1465154705, "my genesis block!!", "816534932c2b7154836da6afc367695e6337db8a921823784c14378abed4f7d7", 0, 0);
 };
 
 var blockchain = [getGenesisBlock()];
 
-var initHttpServer = () => {
-    var app = express();
+var initHttpServer = () => { // 통신 부분 중요함. 데이터는 json 형식에 의존함.
+    var app = express(); // Http 통신
     app.use(bodyParser.json());
 
     app.get('/blocks', (req, res) => res.send(JSON.stringify(blockchain)));
@@ -55,14 +56,14 @@ var initHttpServer = () => {
 };
 
 
-var initP2PServer = () => {
+var initP2PServer = () => { // Websocket
     var server = new WebSocket.Server({port: p2p_port});
     server.on('connection', ws => initConnection(ws));
     console.log('listening websocket p2p port on: ' + p2p_port);
 
 };
 
-var initConnection = (ws) => {
+var initConnection = (ws) => {// Websocket
     sockets.push(ws);
     initMessageHandler(ws);
     initErrorHandler(ws);
@@ -120,7 +121,7 @@ var addBlock = (newBlock) => {
     }
 };
 
-var isValidNewBlock = (newBlock, previousBlock) => {
+var isValidNewBlock = (newBlock, previousBlock) => { // Block transaction verification process X
     if (previousBlock.index + 1 !== newBlock.index) {
         console.log('invalid index');
         return false;
@@ -145,7 +146,7 @@ var connectToPeers = (newPeers) => {
     });
 };
 
-var handleBlockchainResponse = (message) => {
+var handleBlockchainResponse = (message) => { // event process
     var receivedBlocks = JSON.parse(message.data).sort((b1, b2) => (b1.index - b2.index));
     var latestBlockReceived = receivedBlocks[receivedBlocks.length - 1];
     var latestBlockHeld = getLatestBlock();
@@ -167,7 +168,7 @@ var handleBlockchainResponse = (message) => {
     }
 };
 
-var replaceChain = (newBlocks) => {
+var replaceChain = (newBlocks) => { // Block reorganization, transaction verification X
     if (isValidChain(newBlocks) && newBlocks.length > blockchain.length) {
         console.log('Received blockchain is valid. Replacing current blockchain with received blockchain');
         blockchain = newBlocks;
@@ -177,7 +178,7 @@ var replaceChain = (newBlocks) => {
     }
 };
 
-var isValidChain = (blockchainToValidate) => {
+var isValidChain = (blockchainToValidate) => { // Optimazation
     if (JSON.stringify(blockchainToValidate[0]) !== JSON.stringify(getGenesisBlock())) {
         return false;
     }
