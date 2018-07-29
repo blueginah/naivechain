@@ -9,7 +9,9 @@ var p2p_port = process.env.P2P_PORT || 6001;
 var initialPeers = process.env.PEERS ? process.env.PEERS.split(',') : [];
 
 class Block {
+
     constructor(index, previousHash, timestamp, data, hash, nonce, targetvalue) {
+
         this.index = index;
         this.previousHash = previousHash.toString();
         this.timestamp = timestamp;
@@ -17,33 +19,57 @@ class Block {
         this.hash = hash.toString();
         this.nonce = nonce;
         this.targetvalue = targetvalue;
+        this.tx_set = []
     }
 }
 
+var memory_pool = []; // memory_pool add
+
 var sockets = [];
+
 var MessageType = {
+
     QUERY_LATEST: 0,
     QUERY_ALL: 1,
     RESPONSE_BLOCKCHAIN: 2
+
 };
 
-var getGenesisBlock = () => { // 추후, write할 수 있게 수정 필요.
-    return new Block(0, "0", 1465154705, "my genesis block!!", "816534932c2b7154836da6afc367695e6337db8a921823784c14378abed4f7d7", 0, 0);
-};
-
-var blockchain = [getGenesisBlock()];
+var blockchain = [];
 
 var initHttpServer = () => { // 통신 부분 중요함. 데이터는 json 형식에 의존함.
     var app = express(); // Http 통신
     app.use(bodyParser.json());
 
-    app.get('/blocks', (req, res) => res.send(JSON.stringify(blockchain)));
-    app.post('/mineBlock', (req, res) => {
-        var newBlock = generateNextBlock(req.body.data);
+    app.get('/blocks', (req, res) => res.send(JSON.stringify(blockchain))); // show all blockchain
+
+    app.get('/setGenesis', (req, res) => {  // gensis block setting
+        
+        var a = blockchain.length;
+        console.log(JSON.stringify(a));
+        if(a != 0) console.log("gensis block exists");
+        else{
+            var currentTimestamp = new Date().getTime() / 1000;
+            var new_block = new Block(a, "0", currentTimestamp, "Gensis block", "11111", 0, 0);
+            blockchain.push(new_block);
+        }
+        res.send(JSON.stringify(blockchain)); 
+    }); 
+
+    app.post('/mineBlock', (req, res) => { // mining block
+
+        memory_pool = [{"sender" : "a","reciver" : "b","amount" : 100}];   // temporarily set memory pool
+        memory_pool.push({"sender" : "b","reciver" : "c","amount" : 150});
+
+        var newBlock = generateNextBlock(req.body.data, memory_pool); // Using req.body.data for labeling block
+
+        console.log(JSON.stringify(memory_pool));
+
         addBlock(newBlock);
         broadcast(responseLatestMsg());
         console.log('block added: ' + JSON.stringify(newBlock));
         res.send();
+
     });
     app.get('/peers', (req, res) => {
         res.send(sockets.map(s => s._socket.remoteAddress + ':' + s._socket.remotePort));
@@ -97,28 +123,50 @@ var initErrorHandler = (ws) => {
     ws.on('error', () => closeConnection(ws));
 };
 
+// 블록 생성 부분 //
+var generateNextBlock = (blockData, m_pool) => { // block size ??
 
-var generateNextBlock = (blockData) => {
+    m_pool.unshift({"sender" : "X", "reieciver" : "A", "amount" : 10}); // add coinbase
+
     var previousBlock = getLatestBlock();
+
     var nextIndex = previousBlock.index + 1;
+
     var nextTimestamp = new Date().getTime() / 1000;
-    var nextHash = calculateHash(nextIndex, previousBlock.hash, nextTimestamp, blockData);
-    return new Block(nextIndex, previousBlock.hash, nextTimestamp, blockData, nextHash);
+
+	// POW part 
+    
+    var nextHash = calculateHash(nextIndex, previousBlock.hash, nextTimestamp, blockData); // add nonce value
+
+    var new_block = new Block(nextIndex, previousBlock.hash, nextTimestamp, blockData, nextHash, 0, 0);
+
+    new_block.tx_set = m_pool;
+    
+   // console.log(JSON.stringify(memory_pool));
+
+    return new_block;
+
 };
 
 
 var calculateHashForBlock = (block) => {
+
     return calculateHash(block.index, block.previousHash, block.timestamp, block.data);
+
 };
 
 var calculateHash = (index, previousHash, timestamp, data) => {
+
     return CryptoJS.SHA256(index + previousHash + timestamp + data).toString();
+
 };
 
 var addBlock = (newBlock) => {
+
     if (isValidNewBlock(newBlock, getLatestBlock())) {
         blockchain.push(newBlock);
     }
+
 };
 
 var isValidNewBlock = (newBlock, previousBlock) => { // Block transaction verification process X
