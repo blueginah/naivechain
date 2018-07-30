@@ -19,11 +19,13 @@ class Block {
         this.hash = hash.toString();
         this.nonce = nonce;
         this.targetvalue = targetvalue;
-        this.tx_set = []
+        this.tx_set = [];
+        this.merkletree = [];
+        this.root = "";
     }
 }
 
-var memory_pool = []; // memory_pool add
+var memory_pool = [{"sender" : "a","reciver" : "b","amount" : 100}, {"sender" : "b","reciver" : "c","amount" : 150}]; // memory_pool add
 
 var sockets = [];
 
@@ -43,14 +45,20 @@ var initHttpServer = () => { // 통신 부분 중요함. 데이터는 json 형�
 
     app.get('/blocks', (req, res) => res.send(JSON.stringify(blockchain))); // show all blockchain
 
-    app.get('/setGenesis', (req, res) => {  // gensis block setting
+    app.post('/setGenesis', (req, res) => {  // gensis block setting
         
         var a = blockchain.length;
         console.log(JSON.stringify(a));
         if(a != 0) console.log("gensis block exists");
         else{
             var currentTimestamp = new Date().getTime() / 1000;
-            var new_block = new Block(a, "0", currentTimestamp, "Gensis block", "11111", 0, 0);
+            
+            var new_block = new Block(a, "0", currentTimestamp, req.body.data, "", 0, "AAAA");
+
+            var blockHash = calculateHashForBlock(new_block);
+
+            new_block.hash = blockHash.toString();
+            
             blockchain.push(new_block);
         }
         res.send(JSON.stringify(blockchain)); 
@@ -58,8 +66,8 @@ var initHttpServer = () => { // 통신 부분 중요함. 데이터는 json 형�
 
     app.post('/mineBlock', (req, res) => { // mining block
 
-        memory_pool = [{"sender" : "a","reciver" : "b","amount" : 100}];   // temporarily set memory pool
-        memory_pool.push({"sender" : "b","reciver" : "c","amount" : 150});
+        /*memory_pool = [{"sender" : "a","reciver" : "b","amount" : 100}];   // temporarily set memory pool
+        memory_pool.push({"sender" : "b","reciver" : "c","amount" : 150});*/
 
         var newBlock = generateNextBlock(req.body.data, memory_pool); // Using req.body.data for labeling block
 
@@ -124,7 +132,7 @@ var initErrorHandler = (ws) => {
 };
 
 // 블록 생성 부분 //
-var generateNextBlock = (blockData, m_pool) => { // block size ??
+var generateNextBlock = (blockData, m_pool) => {
 
     m_pool.unshift({"sender" : "X", "reieciver" : "A", "amount" : 10}); // add coinbase
 
@@ -133,14 +141,31 @@ var generateNextBlock = (blockData, m_pool) => { // block size ??
     var nextIndex = previousBlock.index + 1;
 
     var nextTimestamp = new Date().getTime() / 1000;
-
-	// POW part 
     
-    var nextHash = calculateHash(nextIndex, previousBlock.hash, nextTimestamp, blockData); // add nonce value
+    var nextHash = calculateHash(nextIndex, previousBlock.hash, nextTimestamp, blockData);
 
-    var new_block = new Block(nextIndex, previousBlock.hash, nextTimestamp, blockData, nextHash, 0, 0);
+    var new_block = new Block(nextIndex, previousBlock.hash, nextTimestamp, blockData, nextHash, 0, "AAAA");
 
-    new_block.tx_set = m_pool;
+    var transaction_num = 0;
+
+    var block_transactions = [];
+
+    while(transaction_num <= 2 && m_pool.length != 0) { // assume block size is 3 transaction
+
+        transaction_num += 1;
+
+        var new_transaction = m_pool.shift();
+
+        block_transactions.push(new_transaction);
+
+    }
+
+
+    new_block.tx_set = block_transactions;
+
+    makemerkletree(new_block, block_transactions);
+
+    ProofofWork(new_block);
     
    // console.log(JSON.stringify(memory_pool));
 
@@ -148,7 +173,61 @@ var generateNextBlock = (blockData, m_pool) => { // block size ??
 
 };
 
+var makemerkletree = (block, block_Transactions) => { // make merkle tree node's value
 
+    var index_s = 0;
+
+    var index_e = 0;
+
+    for( var i in block_Transactions){
+
+        var hash_value = CryptoJS.SHA256(block_Transactions[i]).toString();
+        block.merkletree.push(hash_value);
+    }
+    
+    index_s = 0;
+    index_e = block_Transactions.length;
+
+    while(index_s + 1 != index_e){
+
+        for( var i = index_s; i < index_e; i=i+2){
+            if(i + 1 < index_e){
+                var hash_value = CryptoJS.SHA256(block.merkletree[i] + block.merkletree[i + 1]).toString();
+                block.merkletree.push(hash_value);
+            }
+            else{
+                var hash_value = CryptoJS.SHA256(block.merkletree[i]).toString();
+                block.merkletree.push(hash_value);
+            }
+        }
+
+      //  console.log(index_s);
+      //  console.log(index_e);
+
+        index_s = index_e;
+        index_e = block.merkletree.length;
+
+    }
+
+    block.root = block.merkletree[index_s];
+}
+
+var ProofofWork = (block) => { // Proof of Work 완료
+
+    var hashvalue;
+    while(1){
+
+        hashvalue = CryptoJS.SHA256(block.root + (block.index).toString() + block.data + (block.nonce).toString()).toString();
+
+        var value_1 = hashvalue.substring(0,3);
+
+        if(value_1 < block.targetvalue) break;
+
+        block.nonce += 1;
+
+    }
+
+}
 var calculateHashForBlock = (block) => {
 
     return calculateHash(block.index, block.previousHash, block.timestamp, block.data);
