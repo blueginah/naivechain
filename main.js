@@ -53,7 +53,7 @@ var initHttpServer = () => { // 통신 부분 중요함. 데이터는 json 형�
         else{
             var currentTimestamp = new Date().getTime() / 1000;
             
-            var new_block = new Block(a, "0", currentTimestamp, req.body.data, "", 0, "AAAA");
+            var new_block = new Block(a, "0", 0, req.body.data, "", 0, "0AAA");
 
             var blockHash = calculateHashForBlock(new_block);
 
@@ -98,6 +98,7 @@ var initP2PServer = () => { // Websocket
 };
 
 var initConnection = (ws) => {// Websocket
+    console.log('hello 3001111111111111111');
     sockets.push(ws);
     initMessageHandler(ws);
     initErrorHandler(ws);
@@ -144,7 +145,7 @@ var generateNextBlock = (blockData, m_pool) => {
     
     var nextHash = calculateHash(nextIndex, previousBlock.hash, nextTimestamp, blockData);
 
-    var new_block = new Block(nextIndex, previousBlock.hash, nextTimestamp, blockData, nextHash, 0, "AAAA");
+    var new_block = new Block(nextIndex, previousBlock.hash, nextTimestamp, blockData, nextHash, 0, "0AAA");
 
     var transaction_num = 0;
 
