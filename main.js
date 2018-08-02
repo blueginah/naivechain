@@ -8,6 +8,7 @@ var http_port = process.env.HTTP_PORT || 3001;
 var p2p_port = process.env.P2P_PORT || 6001;
 var initialPeers = process.env.PEERS ? process.env.PEERS.split(',') : [];
 
+//상연아!!
 class Block {
 
     constructor(index, previousHash, timestamp, data, hash, nonce, targetvalue) {
@@ -25,6 +26,7 @@ class Block {
     }
 }
 
+// 상연아!!
 var memory_pool = [{ "sender": "a", "reciver": "b", "amount": 100 }, { "sender": "b", "reciver": "c", "amount": 150 }, { "sender": "baa", "reciver": "c", "amount": 150 }, { "sender": "ab", "reciver": "c", "amount": 150 }]; // memory_pool add
 
 var sockets = [];
@@ -45,7 +47,7 @@ var initHttpServer = () => { // 통신 부분 중요함. 데이터는 json 형�
 
     app.get('/blocks', (req, res) => res.send(JSON.stringify(blockchain))); // show all blockchain
 
-    app.post('/setGenesis', (req, res) => {  // gensis block setting
+    app.post('/setGenesis', (req, res) => {  // gensis block setting 상연아!!
         
         var a = blockchain.length;
         console.log(JSON.stringify(a));
@@ -64,7 +66,7 @@ var initHttpServer = () => { // 통신 부분 중요함. 데이터는 json 형�
         res.send(JSON.stringify(blockchain)); 
     }); 
 
-    app.post('/mineBlock', (req, res) => { // mining block
+    app.post('/mineBlock', (req, res) => { // mining block 상연아!!
 
         /*memory_pool = [{"sender" : "a","reciver" : "b","amount" : 100}];   // temporarily set memory pool
         memory_pool.push({"sender" : "b","reciver" : "c","amount" : 150});*/
@@ -132,7 +134,7 @@ var initErrorHandler = (ws) => {
     ws.on('error', () => closeConnection(ws));
 };
 
-// 블록 생성 부분 //
+// 블록 생성 부분 // 상연아 !!
 var generateNextBlock = (blockData, m_pool) => {
 
     m_pool.unshift({"sender" : "X", "reieciver" : "A", "amount" : 10}); // add coinbase
@@ -151,7 +153,7 @@ var generateNextBlock = (blockData, m_pool) => {
 
     var block_transactions = [];
 
-    while(transaction_num <= 2 && m_pool.length != 0) { // assume block size is 3 transaction
+    while(transaction_num <= 4 && m_pool.length != 0) { // assume block size is 3 transaction
 
         transaction_num += 1;
 
@@ -174,7 +176,7 @@ var generateNextBlock = (blockData, m_pool) => {
 
 };
 
-var makemerkletree = (block, block_Transactions) => { // make merkle tree node's value
+var makemerkletree = (block, block_Transactions) => { // make merkle tree node's value 상연아!!
 
     var index_s = 0;
 
@@ -228,7 +230,7 @@ var makemerkletree = (block, block_Transactions) => { // make merkle tree node's
     block.root = block.merkletree[index_s];
 }
 
-var ProofofWork = (block) => { // Proof of Work 완료
+var ProofofWork = (block) => { // Proof of Work 완료 상연아!!
 
     var hashvalue;
     while(1){
@@ -322,7 +324,7 @@ var replaceChain = (newBlocks) => { // Block reorganization, transaction verific
 };
 
 var isValidChain = (blockchainToValidate) => { // Optimazation
-    if (JSON.stringify(blockchainToValidate[0]) !== JSON.stringify(getGenesisBlock())) {
+    if (JSON.stringify(blockchainToValidate[0]) !== JSON.stringify(getGenesisBlock())) { // 상연아!!!
         return false;
     }
     var tempBlocks = [blockchainToValidate[0]];
