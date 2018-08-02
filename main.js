@@ -25,7 +25,7 @@ class Block {
     }
 }
 
-var memory_pool = [{"sender" : "a","reciver" : "b","amount" : 100}, {"sender" : "b","reciver" : "c","amount" : 150}]; // memory_pool add
+var memory_pool = [{ "sender": "a", "reciver": "b", "amount": 100 }, { "sender": "b", "reciver": "c", "amount": 150 }, { "sender": "baa", "reciver": "c", "amount": 150 }, { "sender": "ab", "reciver": "c", "amount": 150 }]; // memory_pool add
 
 var sockets = [];
 
@@ -164,7 +164,7 @@ var generateNextBlock = (blockData, m_pool) => {
 
     new_block.tx_set = block_transactions;
 
-    makemerkletree(new_block, block_transactions);
+    makemerkletree(new_block, new_block.tx_set);
 
     ProofofWork(new_block);
     
@@ -180,9 +180,24 @@ var makemerkletree = (block, block_Transactions) => { // make merkle tree node's
 
     var index_e = 0;
 
-    for( var i in block_Transactions){
+    /*var data = block_Transactions[1];
+    
+    var strinaaaaa = JSON.stringify(data);
 
-        var hash_value = CryptoJS.SHA256(block_Transactions[i]).toString();
+    console.log(data);
+
+    console.log(strinaaaaa);
+
+    console.log((block_Transactions[1]).join());*/
+
+    for (var i in block_Transactions) {
+
+        var data = block_Transactions[i];
+
+        var transaction_string = JSON.stringify(data);
+
+        var hash_value = CryptoJS.SHA256(transaction_string).toString();
+        console.log(hash_value);
         block.merkletree.push(hash_value);
     }
     
